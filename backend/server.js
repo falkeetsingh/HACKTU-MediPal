@@ -18,15 +18,16 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow Postman / server calls
+    if (!origin) return callback(null, true); // allow Postman / server-to-server calls
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+      return callback(null, true);
+    } 
+    console.warn(`Blocked by CORS: ${origin}`);
+    return callback(null, false); // explicitly deny CORS
   },
   credentials: true
 }));
+
 
 // Increase body size limit for pose landmarks + keyframe images (base64 encoded)
 app.use(express.json({ limit: '50mb' }));

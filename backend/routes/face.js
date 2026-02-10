@@ -33,7 +33,9 @@ router.post('/register', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: 'Face registered successfully' });
   } catch (error) {
-    const status = error.message?.toLowerCase().includes('face service') ? 502 : 400;
+    const status = error.name === 'FaceServiceError'
+      ? (error.status >= 500 ? 502 : error.status)
+      : 400;
     res.status(status).json({ message: 'Face registration failed', detail: error.message });
   }
 });
@@ -56,7 +58,10 @@ router.post('/verify', authMiddleware, async (req, res) => {
       confidence: result.confidence
     });
   } catch (error) {
-    res.status(400).json({ message: 'Face verification failed', detail: error.message });
+    const status = error.name === 'FaceServiceError'
+      ? (error.status >= 500 ? 502 : error.status)
+      : 400;
+    res.status(status).json({ message: 'Face verification failed', detail: error.message });
   }
 });
 

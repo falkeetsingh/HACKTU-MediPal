@@ -10,6 +10,16 @@ const ensureFetch = async () => {
   return fetchImpl;
 };
 
+class FaceServiceError extends Error {
+  constructor(message, status, statusText, body) {
+    super(message);
+    this.name = 'FaceServiceError';
+    this.status = status;
+    this.statusText = statusText;
+    this.body = body;
+  }
+}
+
 const callFaceApi = async (endpoint, formData) => {
   const fetch = await ensureFetch();
 
@@ -38,7 +48,7 @@ const callFaceApi = async (endpoint, formData) => {
       errorBody.message ||
       rawText ||
       `Face service request failed (${response.status} ${response.statusText})`;
-    throw new Error(detail);
+    throw new FaceServiceError(detail, response.status, response.statusText, rawText);
   }
 
   return response.json();

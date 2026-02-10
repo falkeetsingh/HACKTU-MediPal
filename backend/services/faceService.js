@@ -1,6 +1,4 @@
 const FormData = require('form-data');
-
-const FACE_SERVICE_URL ='https://g8c4hvbd-8000.inc1.devtunnels.ms';
 let fetchImpl;
 
 const ensureFetch = async () => {
@@ -15,15 +13,31 @@ const ensureFetch = async () => {
 const callFaceApi = async (endpoint, formData) => {
   const fetch = await ensureFetch();
 
-  const response = await fetch(`${FACE_SERVICE_URL}${endpoint}`, {
+  const response = await fetch(`${process.env.FACE_SERVICE_URL}${endpoint}`, {
     method: 'POST',
     body: formData,
     headers: formData.getHeaders()
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const detail = errorBody.detail || errorBody.message || 'Face service request failed';
+    const rawText = await response.text();
+    let errorBody = {};
+    try {
+      errorBody = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      errorBody = {};
+    }
+    console.error('Face service error', {
+      endpoint,
+      status: response.status,
+      statusText: response.statusText,
+      body: rawText
+    });
+    const detail =
+      errorBody.detail ||
+      errorBody.message ||
+      rawText ||
+      `Face service request failed (${response.status} ${response.statusText})`;
     throw new Error(detail);
   }
 

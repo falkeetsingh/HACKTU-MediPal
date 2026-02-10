@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const WS_URL = 'https://68hpjm9j-8000.inc1.devtunnels.ms/ws/session';
+const WS_URL = 'wss://hacktu-medipal-pose-detection-1.onrender.com/ws/session';
 const FRAME_INTERVAL_MS = 120;
 const MAX_RECONNECTS = 3;
 const RECONNECT_BASE_DELAY_MS = 1200;

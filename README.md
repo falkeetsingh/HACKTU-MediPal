@@ -1,24 +1,25 @@
-# FitCred Medical Compliance PWA
+# MediPal Medical Compliance PWA
 
-A hospital-grade Progressive Web App for tracking medical exercise compliance. Built with MERN stack for clinical documentation used by doctors and patients.
+A hospital-grade Progressive Web App for tracking prescribed exercise compliance, with role-based dashboards for doctors and patients and AI-assisted session verification.
 
 ## Features
 
 ### Patient Features
 
-- View active prescriptions
-- Start and complete exercise sessions
-- Track compliance and progress
-- View session history and streaks
-- Receive notifications
+- View active prescriptions and session history
+- Start and complete exercise sessions (curl, press, squat, walking)
+- Real-time AI form analysis with feedback
+- Compliance stats and streaks
+- Face-based verification for enrollment and walking sessions
+- Notifications for reminders and warnings
 
 ### Doctor Features
 
 - Patient dashboard with compliance overview
-- Create exercise prescriptions
-- View patient compliance trends
+- Create exercise and walking prescriptions
+- Review session analysis and PT review deltas
 - Record treatment decisions
-- Monitor session history
+- Monitor patient progress and session history
 
 ## Tech Stack
 
@@ -27,7 +28,7 @@ A hospital-grade Progressive Web App for tracking medical exercise compliance. B
 - React 18
 - Vite
 - React Router
-- Tailwind CSS
+- Tailwind CSS (v4)
 - Recharts
 - PWA (Service Worker + Manifest)
 
@@ -38,6 +39,7 @@ A hospital-grade Progressive Web App for tracking medical exercise compliance. B
 - MongoDB + Mongoose
 - JWT Authentication
 - RESTful API
+- Optional Face Verification Service (FastAPI)
 
 ## Getting Started
 
@@ -72,8 +74,11 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/fitcred
 JWT_SECRET=your_secret_key
 NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
 FACE_SERVICE_URL=http://localhost:8001
 ```
+
+If you use a different backend port, update the API base in `frontend/src/utils/api.js`.
 
 4. **Start MongoDB**
 
@@ -102,16 +107,11 @@ cd frontend
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The app will be available at `http://localhost:5173`.
 
-8. **Start Face Verification Service (Python)**
+8. **Face Verification Service (Optional)**
 
-```bash
-cd ../python/face-detection
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-```
-
-The FastAPI service only stores face embeddings. See `python/face-detection/README.md` for full setup details (model download, curl tests, and env overrides).
+Provide a FastAPI service endpoint via `FACE_SERVICE_URL`. The backend uses it for `/face/register` and `/face/verify`. Raw images are not persisted.
 
 ## Demo Credentials
 
@@ -135,15 +135,17 @@ After seeding the database:
 ## Project Structure
 
 ```
-FitCred/
+HACKTU-MediPal/
 ├── backend/
 │   ├── models/          # Mongoose schemas
 │   ├── routes/          # API endpoints
+│   ├── services/        # Integrations (face service)
 │   ├── middleware/      # Auth middleware
 │   ├── server.js        # Express app
 │   └── seed.js          # Demo data
 ├── frontend/
 │   ├── src/
+│   │   ├── ai/          # Pose detection + rep counting
 │   │   ├── components/  # Reusable components
 │   │   ├── context/     # React Context (Auth)
 │   │   ├── pages/       # Route pages
@@ -159,9 +161,13 @@ FitCred/
 
 ## API Endpoints
 
+### Health
+
+- `GET /health` - Service status
+
 ### Authentication
 
-- `POST /auth/signup` - Create patient with biometric registration
+- `POST /auth/signup` - Create user with biometric registration (requires `faceImage`)
 - `POST /auth/login` - User login
 - `GET /auth/me` - Get current user
 - `POST /auth/logout` - Logout
@@ -180,11 +186,22 @@ FitCred/
 
 ### Sessions
 
-- `POST /sessions/start` - Start session
-- `POST /sessions/complete` - Complete session
+- `POST /sessions/start` - Start session (curl, press, squat)
+- `POST /sessions/complete` - Complete session with form analysis or walking verification
 - `GET /sessions?patientId=` - List sessions
-- `POST /face/register` - Refresh stored embedding (patient/doctor)
-- `POST /face/verify` - On-demand verification (uses FastAPI service)
+- `GET /sessions/:id` - Get session
+- `GET /sessions/:id/analysis` - Doctor/patient analysis view
+- `POST /sessions/:id/review` - Doctor PT review
+
+### Workouts (AI)
+
+- `POST /api/workouts/verify` - Submit AI-verified workout results
+- `GET /api/workouts/stats?prescriptionId=` - Workout stats
+
+### Face Verification
+
+- `POST /face/register` - Register or refresh face embedding
+- `POST /face/verify` - On-demand verification
 
 ### Compliance
 
@@ -201,33 +218,11 @@ FitCred/
 - `POST /notifications/schedule` - Schedule notification
 - `GET /notifications?userId=` - Get notifications
 
-### Walking + Face Verification
+## AI and Verification
 
-- Walking prescriptions can now be authored from the doctor dashboard.
-- Patients complete walking sessions in real time with two randomized face challenges (skip allowed but downgrades verification).
-- Session records include `verificationEvents` + `verificationSummary` for clinicians.
-- Sessions automatically call the FastAPI biometric service; raw images are never persisted.
-
-## Design Principles
-
-- **Minimalist UI**: Hospital-grade design with neutral colors
-- **Audit-Friendly**: Immutable records, complete logging
-- **Role-Based Access**: Strict permission controls
-- **Medical-Grade**: Professional, calm interface
-- **PWA Support**: Offline-capable, installable
-
-## AI Integration Points
-
-The system is designed for future AI verification integration:
-
-- `verified` (boolean) - Session verification status
-- `confidence` (number) - AI confidence score
-- `verificationSource` (string) - Verification method
-
-Currently using mock data. AI APIs can be plugged in at:
-
-- `backend/routes/sessions.js` - Session verification
-- `frontend/pages/patient/SessionLive.jsx` - Real-time monitoring
+- Pose detection, rep counting, and form analysis live in `frontend/src/ai`.
+- Session completion supports both pose-based and walking verification flows.
+- Face verification uses an external service configured by `FACE_SERVICE_URL`.
 
 ## Development
 
@@ -235,14 +230,14 @@ Currently using mock data. AI APIs can be plugged in at:
 
 ```bash
 cd backend
-npm run dev  # Uses nodemon
+npm run dev
 ```
 
 **Frontend Dev Mode:**
 
 ```bash
 cd frontend
-npm run dev  # Uses Vite HMR
+npm run dev
 ```
 
 **Build for Production:**
@@ -255,7 +250,6 @@ npm run build
 ## Security
 
 - JWT-based authentication
-- HTTP-only cookies option
 - Role-based access control
 - Password hashing with bcrypt
 - Input validation
